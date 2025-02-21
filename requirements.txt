@@ -4,5 +4,6 @@ sentence-transformers
 faiss-cpu
 langchain
 pypdf
+python-docx
 reportlab
-numpy
+pyngrok
