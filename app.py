@@ -210,11 +210,53 @@ def quiz_generator():
                 # Clean the JSON response
                 quiz_json = quiz_json.strip().strip('```json').strip('```')
                 st.write("Cleaned Quiz JSON Response:", quiz_json)  # Debugging
+                
+                # Parse the JSON
                 quiz_data = json.loads(quiz_json)
-                st.session_state.quiz = quiz_data['quiz']
-                st.session_state.user_answers = [None] * len(quiz_data['quiz'])
+                
+                # Ensure the JSON has the expected structure
+                if "quiz" in quiz_data and isinstance(quiz_data["quiz"], list):
+                    st.session_state.quiz = quiz_data["quiz"]
+                    st.session_state.user_answers = [None] * len(quiz_data["quiz"])
+                    st.session_state.correct_answers = [False] * len(quiz_data["quiz"])
+                    st.session_state.is_quiz_generated = True
+                    st.session_state.quiz_submitted = False
+                else:
+                    st.error("Invalid quiz format. Expected a list of questions under the 'quiz' key.")
             except json.JSONDecodeError as e:
                 st.error(f"Failed to parse quiz: {e}. Response: {quiz_json}")
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+
+    # Display the quiz if generated
+    if st.session_state.get("is_quiz_generated", False):
+        quiz = st.session_state.quiz
+        
+        for i, question in enumerate(quiz):
+            st.write(f"**Question {i + 1}:** {question['question']}")
+            st.session_state.user_answers[i] = st.radio(
+                f"Select an option for Question {i + 1}:",
+                question["options"],
+                index=0 if st.session_state.user_answers[i] is None else question["options"].index(st.session_state.user_answers[i]),
+                key=f"question_{i}"
+            )
+        
+        if st.button("Submit Quiz") and not st.session_state.quiz_submitted:
+            st.session_state.quiz_submitted = True
+            for i, question in enumerate(quiz):
+                st.session_state.correct_answers[i] = st.session_state.user_answers[i] == question["answer"]
+
+        if st.session_state.quiz_submitted:
+            total_correct = 0
+            for i, question in enumerate(quiz):
+                if st.session_state.correct_answers[i]:
+                    st.success(f"Correct! ✅ Question {i + 1}: {question['question']}")
+                    total_correct += 1
+                else:
+                    st.error(f"Wrong ❌ Question {i + 1}: {question['question']}")
+                    st.info(f"The correct answer is: {question['answer']}")
+
+            st.write(f"### Final Score: {total_correct} out of {len(quiz)}")
 
 def document_query():
     """Document Q&A"""
