@@ -189,7 +189,7 @@ def quiz_generator():
         
         prompt = f"""
         Generate a 5-question {difficulty.lower()} level quiz based on the following content.
-        Format as JSON with questions, options, and answers:
+        Format as a valid JSON object with the following structure:
         {{
             "quiz": [
                 {{
@@ -207,11 +207,14 @@ def quiz_generator():
         quiz_json = generate_with_gemini(prompt)
         if quiz_json:
             try:
+                # Clean the JSON response
+                quiz_json = quiz_json.strip().strip('```json').strip('```')
+                st.write("Cleaned Quiz JSON Response:", quiz_json)  # Debugging
                 quiz_data = json.loads(quiz_json)
                 st.session_state.quiz = quiz_data['quiz']
                 st.session_state.user_answers = [None] * len(quiz_data['quiz'])
-            except json.JSONDecodeError:
-                st.error("Failed to parse quiz. Please try again.")
+            except json.JSONDecodeError as e:
+                st.error(f"Failed to parse quiz: {e}. Response: {quiz_json}")
 
 def document_query():
     """Document Q&A"""
