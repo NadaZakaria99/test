@@ -209,7 +209,7 @@ def quiz_generator():
             try:
                 # Clean the JSON response
                 quiz_json = quiz_json.strip().strip('```json').strip('```')
-                st.write("Cleaned Quiz JSON Response:", quiz_json)  # Debugging
+                # st.write("Cleaned Quiz JSON Response:", quiz_json)  # Debugging
                 
                 # Parse the JSON
                 quiz_data = json.loads(quiz_json)
