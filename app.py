@@ -234,12 +234,16 @@ def quiz_generator():
         
         for i, question in enumerate(quiz):
             st.write(f"**Question {i + 1}:** {question['question']}")
-            st.session_state.user_answers[i] = st.radio(
+            
+            # Use a unique key for each radio button
+            user_answer = st.radio(
                 f"Select an option for Question {i + 1}:",
                 question["options"],
-                index=0 if st.session_state.user_answers[i] is None else question["options"].index(st.session_state.user_answers[i]),
-                key=f"question_{i}"
+                key=f"question_{i}_radio"  # Unique key for each question
             )
+            
+            # Update session state with the user's answer
+            st.session_state.user_answers[i] = user_answer
         
         if st.button("Submit Quiz") and not st.session_state.quiz_submitted:
             st.session_state.quiz_submitted = True
