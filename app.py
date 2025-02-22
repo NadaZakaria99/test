@@ -640,22 +640,29 @@ def data_ingestion():
     # File upload
     uploaded_file = st.file_uploader("Choose a file", type=["pdf", "txt"])
     if uploaded_file:
-        upload_dir = "uploads"
-        os.makedirs(upload_dir, exist_ok=True)
-        file_path = os.path.join(upload_dir, uploaded_file.name)
-        
-        with open(file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-            
-        # Process document
-        text, _, _ = process_document(file_path)
-        
-        # Store in database
+        # Check if a file with the same name already exists
         c = conn.cursor()
-        c.execute("INSERT INTO files (name, path, size) VALUES (?, ?, ?)",
-                  (uploaded_file.name, file_path, os.path.getsize(file_path)))
-        conn.commit()
-        st.success("File uploaded and processed successfully!")
+        c.execute("SELECT name FROM files WHERE name = ?", (uploaded_file.name,))
+        existing_file = c.fetchone()
+        
+        if existing_file:
+            st.error(f"A file with the name '{uploaded_file.name}' already exists. Please upload a file with a different name.")
+        else:
+            upload_dir = "uploads"
+            os.makedirs(upload_dir, exist_ok=True)
+            file_path = os.path.join(upload_dir, uploaded_file.name)
+            
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+                
+            # Process document
+            text, _, _ = process_document(file_path)
+            
+            # Store in database
+            c.execute("INSERT INTO files (name, path, size) VALUES (?, ?, ?)",
+                      (uploaded_file.name, file_path, os.path.getsize(file_path)))
+            conn.commit()
+            st.success("File uploaded and processed successfully!")
 
     # Manual notes
     st.subheader("Create Manual Notes")
