@@ -1074,6 +1074,8 @@ web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 #                 response_container.markdown(f"**Answer:** {full_response}")
 
 
+
+
 def document_query():
     """Document Q&A with chat history, document selection, and web search fallback."""
     st.subheader("Document Query")
@@ -1175,10 +1177,28 @@ def document_query():
                         # Perform a web search using Tavily
                         web_search_results = web_search_tool.invoke({"query": user_input})
                         
-                        # Display the web search results
-                        st.write("**Web Search Results:**")
-                        for result in web_search_results:
-                            st.write(f"- {result['title']}: {result['url']}")
+                        # Store web search results in session state
+                        st.session_state.web_search_results = web_search_results
+                        
+                        # Generate a response based on the web search results
+                        web_search_prompt = f"""
+                        The user asked: {user_input}
+                        
+                        Here are some web search results:
+                        {web_search_results}
+                        
+                        Please provide a concise and accurate answer based on the above information.
+                        """
+                        
+                        # Generate the final answer using Gemini
+                        web_search_answer = generate_with_gemini(web_search_prompt)
+                        
+                        # Add the web search answer to the chat history
+                        st.session_state.chat_history.append({"role": "assistant", "content": web_search_answer})
+                        
+                        # Display the web search answer
+                        with st.chat_message("assistant"):
+                            st.write(f"**Answer (from web search):** {web_search_answer}")
             else:
                 # Display the assistant's response in a streaming fashion
                 with st.chat_message("assistant"):
@@ -1189,9 +1209,9 @@ def document_query():
                         response_container.markdown(f"**Answer:** {full_response}▌")
                         time.sleep(0.1)  # Simulate streaming
                     response_container.markdown(f"**Answer:** {full_response}")
-            
-            # Add AI response to chat history
-            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+                
+                # Add AI response to chat history
+                st.session_state.chat_history.append({"role": "assistant", "content": answer})
 def main():
     st.title("Study Assistant - Gemini Edition")
     
