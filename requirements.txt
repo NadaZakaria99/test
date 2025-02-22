@@ -8,3 +8,9 @@ python-docx
 reportlab
 pyngrok
 PyPDF2
+llama-index 
+llama-index-embeddings-huggingface
+langchain 
+langchain-huggingface
+langchain-community
+tavily-python
