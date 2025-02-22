@@ -390,27 +390,35 @@ def take_notes():
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
-def init_chat_history():
-    """Initialize chat history in session state."""
+def init_chat_session():
+    """Initialize chat session state."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+    if "selected_doc" not in st.session_state:
+        st.session_state.selected_doc = None
+    if "use_chat_history" not in st.session_state:
+        st.session_state.use_chat_history = True
+def clear_chat_history():
+    """Clear the chat history."""
+    st.session_state.chat_history = []
+    st.rerun()
 
-def display_chat_history():
-    """Display the chat history."""
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+# def display_chat_history():
+#     """Display the chat history."""
+#     for message in st.session_state.chat_history:
+#         with st.chat_message(message["role"]):
+#             st.write(message["content"])
 
-def update_chat_history(role, content):
-    """Update the chat history with a new message."""
-    st.session_state.chat_history.append({"role": role, "content": content})
+# def update_chat_history(role, content):
+#     """Update the chat history with a new message."""
+#     st.session_state.chat_history.append({"role": role, "content": content})
 
 def document_query():
     """Document Q&A with chat history and document selection."""
     st.subheader("Document Query")
     
-    # Initialize chat history and selected document in session state
-    init_chat_history()
+    # Initialize chat session
+    init_chat_session()
     
     # Fetch the list of documents from the database
     c = conn.cursor()
@@ -421,21 +429,30 @@ def document_query():
         st.warning("No documents found!")
         return
     
-    # Document selection (only once per session)
-    if "selected_doc" not in st.session_state:
-        st.session_state.selected_doc = st.selectbox("Select document", [doc[0] for doc in documents])
+    # Document selection
+    if st.session_state.selected_doc is None:
+        st.session_state.selected_doc = st.selectbox("Select a document to chat with", [doc[0] for doc in documents])
         st.info(f"Selected document: {st.session_state.selected_doc}")
     
-    # Display chat history in an expandable section
-    with st.expander("Chat History"):
-        display_chat_history()
+    # Sidebar options
+    with st.sidebar:
+        st.subheader("Chat Settings")
+        st.session_state.use_chat_history = st.checkbox("Enable Chat History", value=st.session_state.use_chat_history)
+        if st.button("Clear Chat History"):
+            clear_chat_history()
+    
+    # Display chat history
+    st.subheader("Chat")
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
     
     # User input
     user_input = st.chat_input("Enter your question")
     
     if user_input:
         # Add user message to chat history
-        update_chat_history("user", user_input)
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
         
         # Get the path of the selected document
         doc_path = [doc[1] for doc in documents if doc[0] == st.session_state.selected_doc][0]
@@ -450,36 +467,44 @@ def document_query():
         # Combine relevant chunks into context
         context = " ".join([chunks[i] for i in indices[0]])
         
-        # Generate prompt with chat history
-        chat_history = "\n".join(
-            [f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history]
-        )
-        prompt = f"""
-        Answer this question based on the provided context and chat history.
-        Chat History:
-        {chat_history}
-        
-        Question: {user_input}
-        Context: {context}
-        If the answer isn't in the context, say you don't know.
-        Provide a concise answer in 2-3 sentences.
-        """
+        # Generate prompt with chat history (if enabled)
+        if st.session_state.use_chat_history:
+            chat_history = "\n".join(
+                [f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history]
+            )
+            prompt = f"""
+            Answer this question based on the provided context and chat history.
+            Chat History:
+            {chat_history}
+            
+            Question: {user_input}
+            Context: {context}
+            If the answer isn't in the context, say you don't know.
+            Provide a concise answer in 2-3 sentences.
+            """
+        else:
+            prompt = f"""
+            Answer this question based on the provided context.
+            Question: {user_input}
+            Context: {context}
+            If the answer isn't in the context, say you don't know.
+            Provide a concise answer in 2-3 sentences.
+            """
         
         # Get AI response using Gemini
         answer = generate_with_gemini(prompt)
         
         if answer:
             # Add AI response to chat history
-            update_chat_history("assistant", answer)
+            st.session_state.chat_history.append({"role": "assistant", "content": answer})
             
             # Display AI response
             with st.chat_message("assistant"):
                 st.write(answer)
-    
     # Clear chat history button
-    if st.button("Clear Chat History"):
-        st.session_state.chat_history = []
-        st.rerun()  # Refresh the app to reflect the cleared chat history
+    # if st.button("Clear Chat History"):
+    #     st.session_state.chat_history = []
+    #     st.rerun()  # Refresh the app to reflect the cleared chat history
                 
 def main():
     st.title("Study Assistant - Gemini Edition")
@@ -499,5 +524,6 @@ def main():
         take_notes()
     elif choice == "Uploaded Files":
         uploaded_files()
+
 if __name__ == "__main__":
     main()
