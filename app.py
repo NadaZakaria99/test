@@ -949,6 +949,135 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 os.environ["TAVILY_API_KEY"] = "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"  # Replace with your actual Tavily API key
 web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 
+# def document_query():
+#     """Document Q&A with chat history, document selection, and web search fallback."""
+#     st.subheader("Document Query")
+    
+#     # Initialize chat session
+#     init_chat_session()
+    
+#     # Fetch the list of documents from the database
+#     c = conn.cursor()
+#     c.execute("SELECT name, path FROM files")
+#     documents = c.fetchall()
+    
+#     if not documents:
+#         st.warning("No documents found!")
+#         return
+    
+#     # Document selection
+#     if st.session_state.selected_doc is None:
+#         st.session_state.selected_doc = st.selectbox("Select a file to chat with", [doc[0] for doc in documents])
+#         st.info(f"Selected document: {st.session_state.selected_doc}")
+    
+#     # Sidebar options
+#     with st.sidebar:
+#         st.subheader("Chat Settings")
+#         st.session_state.use_chat_history = st.checkbox("Enable Chat History", value=st.session_state.use_chat_history)
+#         if st.button("Clear Chat History"):
+#             clear_chat_history()
+    
+#     # Display chat history
+#     st.subheader("Chat")
+#     for message in st.session_state.chat_history:
+#         with st.chat_message(message["role"]):
+#             st.write(message["content"])
+    
+#     # User input
+#     user_input = st.chat_input("Enter your question")
+    
+#     if user_input:
+#         # Add user message to chat history
+#         st.session_state.chat_history.append({"role": "user", "content": user_input})
+        
+#         # Display the user's question
+#         with st.chat_message("user"):
+#             st.write(f"**Question:** {user_input}")
+        
+#         # Get the path of the selected document
+#         doc_path = [doc[1] for doc in documents if doc[0] == st.session_state.selected_doc][0]
+        
+#         # Extract text from the document
+#         text, index, chunks = process_document(doc_path)
+        
+#         # Find relevant chunks using FAISS
+#         query_embedding = embedding_model.encode([user_input])
+#         _, indices = index.search(np.array(query_embedding).astype('float32'), k=3)
+        
+#         # Combine relevant chunks into context
+#         context = " ".join([chunks[i] for i in indices[0]])
+        
+#         # Generate prompt with chat history (if enabled)
+#         if st.session_state.use_chat_history:
+#             chat_history = "\n".join(
+#                 [f"{message['role']}: {message['content']}" for message in st.session_state.chat_history]
+#             )
+#             prompt = f"""
+#             You are a helpful assistant. Answer the user's question based on the provided context and chat history.
+#             Chat History:
+#             {chat_history}
+            
+#             Context:
+#             {context}
+            
+#             Question: {user_input}
+#             If the answer isn't in the context, say you don't know.
+#             Provide a concise and accurate answer in 2-3 sentences.
+#             """
+#         else:
+#             prompt = f"""
+#             You are a helpful assistant. Answer the user's question based on the provided context.
+#             Context:
+#             {context}
+            
+#             Question: {user_input}
+#             If the answer isn't in the context, say you don't know.
+#             Provide a concise and accurate answer in 2-3 sentences.
+#             """
+        
+#         # Get AI response using Gemini
+#         answer = generate_with_gemini(prompt)
+        
+#         if answer:
+#             # Check if the assistant couldn't find the answer in the context
+#             if "I don't know" in answer or "not in the context" in answer:
+#                 # Perform a web search using Tavily
+#                 web_search_results = web_search_tool.invoke({"query": user_input})
+                
+#                 # Generate a new prompt with the web search results
+#                 web_search_prompt = f"""
+#                 The original query was: {user_input}
+
+#                 Here are some web search results that might be relevant:
+#                 {web_search_results}
+
+#                 Please provide a structured answer based on the above information.
+#                 """
+                
+#                 # Generate the final answer using Gemini
+#                 web_search_answer = generate_with_gemini(web_search_prompt)
+                
+#                 # Update the answer with web search results
+#                 answer = f"{answer}\n\n**Web Search Results:**\n{web_search_answer}"
+            
+#             # Add AI response to chat history
+#             st.session_state.chat_history.append({"role": "assistant", "content": answer})
+            
+#             # Display AI response in a streaming fashion
+#             with st.chat_message("assistant"):
+#                 response_container = st.empty()
+#                 full_response = ""
+#                 for chunk in answer.split():
+#                     full_response += chunk + " "
+#                     response_container.markdown(f"**Answer:** {full_response}▌")
+#                     time.sleep(0.1)  # Simulate streaming
+#                 response_container.markdown(f"**Answer:** {full_response}")
+from langchain_community.tools.tavily_search import TavilySearchResults
+
+# Set the Tavily API key
+os.environ["TAVILY_API_KEY"] = "your_tavily_api_key"  # Replace with your actual Tavily API key
+web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
+
 def document_query():
     """Document Q&A with chat history, document selection, and web search fallback."""
     st.subheader("Document Query")
@@ -1041,37 +1170,32 @@ def document_query():
         if answer:
             # Check if the assistant couldn't find the answer in the context
             if "I don't know" in answer or "not in the context" in answer:
-                # Perform a web search using Tavily
-                web_search_results = web_search_tool.invoke({"query": user_input})
-                
-                # Generate a new prompt with the web search results
-                web_search_prompt = f"""
-                The original query was: {user_input}
-
-                Here are some web search results that might be relevant:
-                {web_search_results}
-
-                Please provide a structured answer based on the above information.
-                """
-                
-                # Generate the final answer using Gemini
-                web_search_answer = generate_with_gemini(web_search_prompt)
-                
-                # Update the answer with web search results
-                answer = f"{answer}\n\n**Web Search Results:**\n{web_search_answer}"
+                # Display the assistant's response with a search icon
+                with st.chat_message("assistant"):
+                    st.write(answer)
+                    
+                    # Add a search icon button
+                    if st.button("🔍 Search the Web", key=f"search_{user_input}"):
+                        # Perform a web search using Tavily
+                        web_search_results = web_search_tool.invoke({"query": user_input})
+                        
+                        # Display the web search results
+                        st.write("**Web Search Results:**")
+                        for result in web_search_results:
+                            st.write(f"- {result['title']}: {result['url']}")
+            else:
+                # Display the assistant's response in a streaming fashion
+                with st.chat_message("assistant"):
+                    response_container = st.empty()
+                    full_response = ""
+                    for chunk in answer.split():
+                        full_response += chunk + " "
+                        response_container.markdown(f"**Answer:** {full_response}▌")
+                        time.sleep(0.1)  # Simulate streaming
+                    response_container.markdown(f"**Answer:** {full_response}")
             
             # Add AI response to chat history
             st.session_state.chat_history.append({"role": "assistant", "content": answer})
-            
-            # Display AI response in a streaming fashion
-            with st.chat_message("assistant"):
-                response_container = st.empty()
-                full_response = ""
-                for chunk in answer.split():
-                    full_response += chunk + " "
-                    response_container.markdown(f"**Answer:** {full_response}▌")
-                    time.sleep(0.1)  # Simulate streaming
-                response_container.markdown(f"**Answer:** {full_response}")
 def main():
     st.title("Study Assistant - Gemini Edition")
     
