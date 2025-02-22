@@ -1085,6 +1085,8 @@ def document_query():
         st.session_state.show_web_search = False
     if "web_search_answer" not in st.session_state:
         st.session_state.web_search_answer = None
+    if "current_question" not in st.session_state:
+        st.session_state.current_question = None
     
     # Fetch the list of documents from the database
     c = conn.cursor()
@@ -1112,14 +1114,49 @@ def document_query():
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.write(message["content"])
+            
+            # Show web search button after assistant messages suggesting web search
+            if (message["role"] == "assistant" and 
+                ("I don't know" in message["content"] or "not in the context" in message["content"])):
+                # Create a container for the button with some styling
+                button_container = st.container()
+                with button_container:
+                    col1, col2, col3 = st.columns([1, 2, 1])
+                    with col2:
+                        if st.button("🔍 Search Web for Answer", key=f"search_{len(st.session_state.chat_history)}"):
+                            with st.spinner("Searching the web..."):
+                                # Store current question for reference
+                                current_question = st.session_state.current_question
+                                
+                                # Perform web search
+                                web_search_results = web_search_tool.invoke({"query": current_question})
+                                
+                                # Generate answer from web search results
+                                web_search_prompt = f"""
+                                The original query was: {current_question}
+
+                                Here are some web search results that might be relevant:
+                                {web_search_results}
+
+                                Please provide a structured answer based on the above information.
+                                Generate a concise and accurate answer in 2-3 sentences.
+                                """
+                                
+                                web_answer = generate_with_gemini(web_search_prompt)
+                                
+                                # Add web search answer to chat history
+                                st.session_state.chat_history.append({
+                                    "role": "assistant", 
+                                    "content": f"Based on web search:\n{web_answer}"
+                                })
+                                st.rerun()  # Refresh to show new answer
     
     # User input
     user_input = st.chat_input("Enter your question")
     
     if user_input:
-        # Reset web search state for new questions
-        st.session_state.show_web_search = False
-        st.session_state.web_search_answer = None
+        # Store current question
+        st.session_state.current_question = user_input
         
         # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": user_input})
@@ -1144,7 +1181,7 @@ def document_query():
         # Generate prompt with chat history (if enabled)
         if st.session_state.use_chat_history:
             chat_history = "\n".join(
-                [f"{message['role']}: {message['content']}" for message in st.session_state.chat_history]
+                [f"{message['role']}: {message['content']}" for message in st.session_state.chat_history[-5:]]  # Last 5 messages
             )
             prompt = f"""
             You are a helpful assistant. Answer the user's question based on the provided context and chat history.
@@ -1155,7 +1192,7 @@ def document_query():
             {context}
             
             Question: {user_input}
-            If the answer isn't in the context, say you don't know and suggest using web search.
+            If the answer isn't in the context, clearly state that you don't know and suggest using web search.
             Provide a concise and accurate answer in 2-3 sentences.
             """
         else:
@@ -1165,7 +1202,7 @@ def document_query():
             {context}
             
             Question: {user_input}
-            If the answer isn't in the context, say you don't know and suggest using web search.
+            If the answer isn't in the context, clearly state that you don't know and suggest using web search.
             Provide a concise and accurate answer in 2-3 sentences.
             """
         
@@ -1173,44 +1210,13 @@ def document_query():
         answer = generate_with_gemini(prompt)
         
         if answer:
-            # Check if the assistant couldn't find the answer in the context
-            if "I don't know" in answer or "not in the context" in answer:
-                st.session_state.show_web_search = True
-            
             # Add AI response to chat history
             st.session_state.chat_history.append({"role": "assistant", "content": answer})
             
             # Display AI response
             with st.chat_message("assistant"):
                 st.markdown(f"**Answer:** {answer}")
-                
-                # Show web search button if answer not found in context
-                if st.session_state.show_web_search:
-                    if st.button("Search Web for Answer"):
-                        # Perform web search
-                        web_search_results = web_search_tool.invoke({"query": user_input})
-                        
-                        # Generate answer from web search results
-                        web_search_prompt = f"""
-                        The original query was: {user_input}
-
-                        Here are some web search results that might be relevant:
-                        {web_search_results}
-
-                        Please provide a structured answer based on the above information.
-                        Generate a concise and accurate answer in 2-3 sentences.
-                        """
-                        
-                        st.session_state.web_search_answer = generate_with_gemini(web_search_prompt)
-                        
-                        # Add web search answer to chat history
-                        st.session_state.chat_history.append({
-                            "role": "assistant", 
-                            "content": f"**Web Search Results:**\n{st.session_state.web_search_answer}"
-                        })
-                        
-                        # Display web search answer
-                        st.markdown(f"**Web Search Results:**\n{st.session_state.web_search_answer}")
+                st.rerun()  # Refresh to show potential web search button
 
 def main():
     st.title("Study Assistant - Gemini Edition")
