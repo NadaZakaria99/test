@@ -1642,13 +1642,13 @@ def main():
     choice = st.sidebar.radio("Navigate", menu)
 
     # Handle menu selection
-    if choice == "Data Ingestion":
+    if choice == "Upload Study Materials":
         data_ingestion()
     elif choice == "Summarizer":
         summarizer()
-    elif choice == "Quiz Generator":
+    elif choice == "Create Quizzes":
         quiz_generator()
-    elif choice == "Document Query":
+    elif choice == "Ask Questions":
         document_query()  # Includes chat history
     elif choice == "Notes":
         take_notes()
