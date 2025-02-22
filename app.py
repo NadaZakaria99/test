@@ -370,3 +370,5 @@ def main():
         document_query()
     elif choice == "Notes":
         take_notes()  # Add this line
+if __name__ == "__main__":
+    main()
