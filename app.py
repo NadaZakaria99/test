@@ -1660,7 +1660,7 @@ def document_query():
     with st.sidebar:
         st.subheader("Chat Settings")
         st.session_state.use_chat_history = st.checkbox("Enable Chat History", value=st.session_state.use_chat_history)
-        if st.button("Clear Chat History"):
+        if st.button("New Chat"):
             clear_chat_history()  # This will reset the selected document and clear the chat history
     
     # Display chat history
