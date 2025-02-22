@@ -774,24 +774,128 @@ def summarizer():
             st.subheader("Summary")
             st.write(summary)
 
+# def quiz_generator():
+#     """Quiz generation"""
+#     st.subheader("Quiz Generator")
+    
+#     c = conn.cursor()
+#     c.execute("SELECT name, path FROM files")
+#     documents = c.fetchall()
+    
+#     if not documents:
+#         st.warning("No documents found!")
+#         return
+    
+#     selected_doc = st.selectbox("Select document", [doc[0] for doc in documents])
+#     difficulty = st.selectbox("Difficulty level", ["Easy", "Medium", "Hard"])
+    
+#     if st.button("Generate Quiz"):
+#         doc_path = [doc[1] for doc in documents if doc[0] == selected_doc][0]
+#         text, _, _ = process_document(doc_path)
+        
+#         prompt = f"""
+#         Generate a 5-question {difficulty.lower()} level quiz based on the following content.
+#         Format as a valid JSON object with the following structure:
+#         {{
+#             "quiz": [
+#                 {{
+#                     "question": "",
+#                     "options": ["", "", "", ""],
+#                     "answer": ""
+#                 }}
+#             ]
+#         }}
+        
+#         Content:
+#         {text[:5000]}
+#         """
+        
+#         quiz_json = generate_with_gemini(prompt)
+#         if quiz_json:
+#             try:
+#                 # Clean the JSON response
+#                 quiz_json = quiz_json.strip().strip('```json').strip('```')
+#                 # st.write("Cleaned Quiz JSON Response:", quiz_json)  # Debugging
+                
+#                 # Parse the JSON
+#                 quiz_data = json.loads(quiz_json)
+                
+#                 # Ensure the JSON has the expected structure
+#                 if "quiz" in quiz_data and isinstance(quiz_data["quiz"], list):
+#                     st.session_state.quiz = quiz_data["quiz"]
+#                     st.session_state.user_answers = [None] * len(quiz_data["quiz"])
+#                     st.session_state.correct_answers = [False] * len(quiz_data["quiz"])
+#                     st.session_state.is_quiz_generated = True
+#                     st.session_state.quiz_submitted = False
+#                 else:
+#                     st.error("Invalid quiz format. Expected a list of questions under the 'quiz' key.")
+#             except json.JSONDecodeError as e:
+#                 st.error(f"Failed to parse quiz: {e}. Response: {quiz_json}")
+#             except Exception as e:
+#                 st.error(f"An error occurred: {e}")
+
+#     # Display the quiz if generated
+#     if st.session_state.get("is_quiz_generated", False):
+#         quiz = st.session_state.quiz
+        
+#         for i, question in enumerate(quiz):
+#             st.write(f"**Question {i + 1}:** {question['question']}")
+            
+#             # Use a unique key for each radio button
+#             user_answer = st.radio(
+#                 f"Select an option for Question {i + 1}:",
+#                 question["options"],
+#                 key=f"question_{i}_radio"  # Unique key for each question
+#             )
+            
+#             # Update session state with the user's answer
+#             st.session_state.user_answers[i] = user_answer
+        
+#         if st.button("Submit Quiz") and not st.session_state.quiz_submitted:
+#             st.session_state.quiz_submitted = True
+#             for i, question in enumerate(quiz):
+#                 st.session_state.correct_answers[i] = st.session_state.user_answers[i] == question["answer"]
+
+#         if st.session_state.quiz_submitted:
+#             total_correct = 0
+#             for i, question in enumerate(quiz):
+#                 if st.session_state.correct_answers[i]:
+#                     st.success(f"Correct! ✅ Question {i + 1}: {question['question']}")
+#                     total_correct += 1
+#                 else:
+#                     st.error(f"Wrong ❌ Question {i + 1}: {question['question']}")
+#                     st.info(f"The correct answer is: {question['answer']}")
+
+#             st.write(f"### Final Score: {total_correct} out of {len(quiz)}")
 def quiz_generator():
     """Quiz generation"""
     st.subheader("Quiz Generator")
     
+    # Fetch list of documents and manual notes
     c = conn.cursor()
     c.execute("SELECT name, path FROM files")
     documents = c.fetchall()
+    c.execute("SELECT content FROM notes")
+    manual_notes = c.fetchall()
     
-    if not documents:
-        st.warning("No documents found!")
+    if not documents and not manual_notes:
+        st.warning("No documents or notes found!")
         return
     
-    selected_doc = st.selectbox("Select document", [doc[0] for doc in documents])
+    # Combine documents and manual notes for selection
+    options = [doc[0] for doc in documents] + [f"Manual Note {i+1}" for i, _ in enumerate(manual_notes)]
+    selected_option = st.selectbox("Select document or note", options)
     difficulty = st.selectbox("Difficulty level", ["Easy", "Medium", "Hard"])
     
     if st.button("Generate Quiz"):
-        doc_path = [doc[1] for doc in documents if doc[0] == selected_doc][0]
-        text, _, _ = process_document(doc_path)
+        if selected_option.startswith("Manual Note"):
+            # Fetch the corresponding manual note
+            note_index = int(selected_option.split(" ")[-1]) - 1
+            text = manual_notes[note_index][0]
+        else:
+            # Fetch the selected document
+            doc_path = [doc[1] for doc in documents if doc[0] == selected_option][0]
+            text, _, _ = process_document(doc_path)
         
         prompt = f"""
         Generate a 5-question {difficulty.lower()} level quiz based on the following content.
@@ -815,12 +919,8 @@ def quiz_generator():
             try:
                 # Clean the JSON response
                 quiz_json = quiz_json.strip().strip('```json').strip('```')
-                # st.write("Cleaned Quiz JSON Response:", quiz_json)  # Debugging
-                
-                # Parse the JSON
                 quiz_data = json.loads(quiz_json)
                 
-                # Ensure the JSON has the expected structure
                 if "quiz" in quiz_data and isinstance(quiz_data["quiz"], list):
                     st.session_state.quiz = quiz_data["quiz"]
                     st.session_state.user_answers = [None] * len(quiz_data["quiz"])
@@ -833,40 +933,6 @@ def quiz_generator():
                 st.error(f"Failed to parse quiz: {e}. Response: {quiz_json}")
             except Exception as e:
                 st.error(f"An error occurred: {e}")
-
-    # Display the quiz if generated
-    if st.session_state.get("is_quiz_generated", False):
-        quiz = st.session_state.quiz
-        
-        for i, question in enumerate(quiz):
-            st.write(f"**Question {i + 1}:** {question['question']}")
-            
-            # Use a unique key for each radio button
-            user_answer = st.radio(
-                f"Select an option for Question {i + 1}:",
-                question["options"],
-                key=f"question_{i}_radio"  # Unique key for each question
-            )
-            
-            # Update session state with the user's answer
-            st.session_state.user_answers[i] = user_answer
-        
-        if st.button("Submit Quiz") and not st.session_state.quiz_submitted:
-            st.session_state.quiz_submitted = True
-            for i, question in enumerate(quiz):
-                st.session_state.correct_answers[i] = st.session_state.user_answers[i] == question["answer"]
-
-        if st.session_state.quiz_submitted:
-            total_correct = 0
-            for i, question in enumerate(quiz):
-                if st.session_state.correct_answers[i]:
-                    st.success(f"Correct! ✅ Question {i + 1}: {question['question']}")
-                    total_correct += 1
-                else:
-                    st.error(f"Wrong ❌ Question {i + 1}: {question['question']}")
-                    st.info(f"The correct answer is: {question['answer']}")
-
-            st.write(f"### Final Score: {total_correct} out of {len(quiz)}")
 def take_notes():
     """Generate notes from a selected document"""
     st.subheader("Generate Notes from Documents")
