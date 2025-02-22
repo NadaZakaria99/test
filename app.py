@@ -1075,7 +1075,6 @@ web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 
 
 
-
 def document_query():
     """Document Q&A with chat history, document selection, and web search fallback."""
     st.subheader("Document Query")
@@ -1168,7 +1167,7 @@ def document_query():
         if answer:
             # Check if the assistant couldn't find the answer in the context
             if "I don't know" in answer or "not in the context" in answer:
-                # Display the assistant's response with a search icon
+                # Display the assistant's response
                 with st.chat_message("assistant"):
                     st.write(answer)
                     
@@ -1177,15 +1176,17 @@ def document_query():
                         # Perform a web search using Tavily
                         web_search_results = web_search_tool.invoke({"query": user_input})
                         
-                        # Store web search results in session state
-                        st.session_state.web_search_results = web_search_results
+                        # Format the web search results
+                        formatted_web_search_results = "\n".join(
+                            [f"- {result['title']}: {result['url']}" for result in web_search_results]
+                        )
                         
                         # Generate a response based on the web search results
                         web_search_prompt = f"""
                         The user asked: {user_input}
                         
                         Here are some web search results:
-                        {web_search_results}
+                        {formatted_web_search_results}
                         
                         Please provide a concise and accurate answer based on the above information.
                         """
