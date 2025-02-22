@@ -1072,11 +1072,7 @@ web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 #                     response_container.markdown(f"**Answer:** {full_response}▌")
 #                     time.sleep(0.1)  # Simulate streaming
 #                 response_container.markdown(f"**Answer:** {full_response}")
-from langchain_community.tools.tavily_search import TavilySearchResults
 
-# Set the Tavily API key
-os.environ["TAVILY_API_KEY"] = "your_tavily_api_key"  # Replace with your actual Tavily API key
-web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 
 def document_query():
     """Document Q&A with chat history, document selection, and web search fallback."""
