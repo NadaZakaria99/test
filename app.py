@@ -1074,11 +1074,17 @@ web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 #                 response_container.markdown(f"**Answer:** {full_response}")
 
 def document_query():
-    """Document Q&A with chat history, document selection, and web search fallback."""
+    """Document Q&A with chat history, document selection, and optional web search fallback."""
     st.subheader("Document Query")
     
     # Initialize chat session
     init_chat_session()
+    
+    # Initialize web search state if not exists
+    if "show_web_search" not in st.session_state:
+        st.session_state.show_web_search = False
+    if "web_search_answer" not in st.session_state:
+        st.session_state.web_search_answer = None
     
     # Fetch the list of documents from the database
     c = conn.cursor()
@@ -1111,6 +1117,10 @@ def document_query():
     user_input = st.chat_input("Enter your question")
     
     if user_input:
+        # Reset web search state for new questions
+        st.session_state.show_web_search = False
+        st.session_state.web_search_answer = None
+        
         # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": user_input})
         
@@ -1145,7 +1155,7 @@ def document_query():
             {context}
             
             Question: {user_input}
-            If the answer isn't in the context, say you don't know.
+            If the answer isn't in the context, say you don't know and suggest using web search.
             Provide a concise and accurate answer in 2-3 sentences.
             """
         else:
@@ -1155,7 +1165,7 @@ def document_query():
             {context}
             
             Question: {user_input}
-            If the answer isn't in the context, say you don't know.
+            If the answer isn't in the context, say you don't know and suggest using web search.
             Provide a concise and accurate answer in 2-3 sentences.
             """
         
@@ -1165,52 +1175,42 @@ def document_query():
         if answer:
             # Check if the assistant couldn't find the answer in the context
             if "I don't know" in answer or "not in the context" in answer:
-                # Display the assistant's response
-                with st.chat_message("assistant"):
-                    st.write(answer)
-                    
-                    # Add a search icon button
-                    if st.button("🔍 Search the Web", key=f"search_{user_input}"):
-                        # Perform a web search using Tavily
+                st.session_state.show_web_search = True
+            
+            # Add AI response to chat history
+            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+            
+            # Display AI response
+            with st.chat_message("assistant"):
+                st.markdown(f"**Answer:** {answer}")
+                
+                # Show web search button if answer not found in context
+                if st.session_state.show_web_search:
+                    if st.button("Search Web for Answer"):
+                        # Perform web search
                         web_search_results = web_search_tool.invoke({"query": user_input})
                         
-                        # Format the web search results
-                        formatted_web_search_results = "\n".join(
-                            [f"- {result['title']}: {result['url']}" for result in web_search_results]
-                        )
-                        
-                        # Generate a response based on the web search results
+                        # Generate answer from web search results
                         web_search_prompt = f"""
-                        The user asked: {user_input}
-                        
-                        Here are some web search results:
-                        {formatted_web_search_results}
-                        
-                        Please provide a concise and accurate answer based on the above information.
+                        The original query was: {user_input}
+
+                        Here are some web search results that might be relevant:
+                        {web_search_results}
+
+                        Please provide a structured answer based on the above information.
+                        Generate a concise and accurate answer in 2-3 sentences.
                         """
                         
-                        # Generate the final answer using Gemini
-                        web_search_answer = generate_with_gemini(web_search_prompt)
+                        st.session_state.web_search_answer = generate_with_gemini(web_search_prompt)
                         
-                        # Add the web search answer to the chat history
-                        st.session_state.chat_history.append({"role": "assistant", "content": web_search_answer})
+                        # Add web search answer to chat history
+                        st.session_state.chat_history.append({
+                            "role": "assistant", 
+                            "content": f"**Web Search Results:**\n{st.session_state.web_search_answer}"
+                        })
                         
-                        # Display the web search answer
-                        with st.chat_message("assistant"):
-                            st.write(f"**Answer (from web search):** {web_search_answer}")
-            else:
-                # Display the assistant's response in a streaming fashion
-                with st.chat_message("assistant"):
-                    response_container = st.empty()
-                    full_response = ""
-                    for chunk in answer.split():
-                        full_response += chunk + " "
-                        response_container.markdown(f"**Answer:** {full_response}▌")
-                        time.sleep(0.1)  # Simulate streaming
-                    response_container.markdown(f"**Answer:** {full_response}")
-                
-                # Add AI response to chat history
-                st.session_state.chat_history.append({"role": "assistant", "content": answer})
+                        # Display web search answer
+                        st.markdown(f"**Web Search Results:**\n{st.session_state.web_search_answer}")
 
 def main():
     st.title("Study Assistant - Gemini Edition")
