@@ -394,24 +394,23 @@ def init_chat_history():
     """Initialize chat history in session state."""
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+
 def display_chat_history():
     """Display the chat history."""
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.write(message["content"])
+
 def update_chat_history(role, content):
     """Update the chat history with a new message."""
     st.session_state.chat_history.append({"role": role, "content": content})
-    
+
 def document_query():
     """Document Q&A with chat history and document selection."""
     st.subheader("Document Query")
     
     # Initialize chat history and selected document in session state
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-    if "selected_doc" not in st.session_state:
-        st.session_state.selected_doc = None
+    init_chat_history()
     
     # Fetch the list of documents from the database
     c = conn.cursor()
@@ -423,22 +422,20 @@ def document_query():
         return
     
     # Document selection (only once per session)
-    if st.session_state.selected_doc is None:
+    if "selected_doc" not in st.session_state:
         st.session_state.selected_doc = st.selectbox("Select document", [doc[0] for doc in documents])
         st.info(f"Selected document: {st.session_state.selected_doc}")
     
     # Display chat history in an expandable section
     with st.expander("Chat History"):
-        for message in st.session_state.chat_history:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
+        display_chat_history()
     
     # User input
     user_input = st.chat_input("Enter your question")
     
     if user_input:
         # Add user message to chat history
-        st.session_state.chat_history.append({"role": "user", "content": user_input})
+        update_chat_history("user", user_input)
         
         # Get the path of the selected document
         doc_path = [doc[1] for doc in documents if doc[0] == st.session_state.selected_doc][0]
@@ -446,10 +443,11 @@ def document_query():
         # Extract text from the document
         text, index, chunks = process_document(doc_path)
         
-        # Find relevant chunks
+        # Find relevant chunks using FAISS
         query_embedding = embedding_model.encode([user_input])
         _, indices = index.search(np.array(query_embedding).astype('float32'), k=3)
         
+        # Combine relevant chunks into context
         context = " ".join([chunks[i] for i in indices[0]])
         
         # Generate prompt with chat history
@@ -467,20 +465,22 @@ def document_query():
         Provide a concise answer in 2-3 sentences.
         """
         
-        # Get AI response
+        # Get AI response using Gemini
         answer = generate_with_gemini(prompt)
         
         if answer:
             # Add AI response to chat history
-            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+            update_chat_history("assistant", answer)
             
             # Display AI response
             with st.chat_message("assistant"):
                 st.write(answer)
+    
+    # Clear chat history button
+    if st.button("Clear Chat History"):
+        st.session_state.chat_history = []
+        st.rerun()  # Refresh the app to reflect the cleared chat history
                 
-if st.button("Clear Chat History"):
-    st.session_state.chat_history = []
-    st.rerun()  # Refresh the app to reflect the cleared chat history
 def main():
     st.title("Study Assistant - Gemini Edition")
     
