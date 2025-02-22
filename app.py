@@ -1635,7 +1635,7 @@ def main():
     st.title("EduMate – Your Smartest Study Companion!🚀📚")
 
     # Define the menu options
-    menu = ["Data Ingestion", "Summarizer", "Quiz Generator", "Document Query", "Notes", "Uploaded Files"]
+    menu = ["Upload Study Materials", "Summarizer", "Create Quizzes", "Ask Questions", "Notes", "Uploaded Files"]
 
     # Display the menu in the sidebar (always visible)
     st.sidebar.title("Menu")
