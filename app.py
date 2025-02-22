@@ -984,6 +984,10 @@ def document_query():
         # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": user_input})
         
+        # Display the user's question
+        with st.chat_message("user"):
+            st.write(f"**Question:** {user_input}")
+        
         # Get the path of the selected document
         doc_path = [doc[1] for doc in documents if doc[0] == st.session_state.selected_doc][0]
         
@@ -1001,22 +1005,26 @@ def document_query():
         if st.session_state.use_chat_history:
             chat_history = get_chat_history()
             prompt = f"""
-            Answer this question based on the provided context and chat history.
+            You are a helpful assistant. Answer the user's question based on the provided context and chat history.
             Chat History:
             {chat_history}
             
+            Context:
+            {context}
+            
             Question: {user_input}
-            Context: {context}
             If the answer isn't in the context, say you don't know.
-            Provide a concise answer in 2-3 sentences.
+            Provide a concise and accurate answer in 2-3 sentences.
             """
         else:
             prompt = f"""
-            Answer this question based on the provided context.
+            You are a helpful assistant. Answer the user's question based on the provided context.
+            Context:
+            {context}
+            
             Question: {user_input}
-            Context: {context}
             If the answer isn't in the context, say you don't know.
-            Provide a concise answer in 2-3 sentences.
+            Provide a concise and accurate answer in 2-3 sentences.
             """
         
         # Get AI response using Gemini
@@ -1032,9 +1040,9 @@ def document_query():
                 full_response = ""
                 for chunk in answer.split():
                     full_response += chunk + " "
-                    response_container.markdown(full_response + "▌")
+                    response_container.markdown(f"**Answer:** {full_response}▌")
                     time.sleep(0.1)  # Simulate streaming
-                response_container.markdown(full_response)
+                response_container.markdown(f"**Answer:** {full_response}")
 
 def main():
     st.title("Study Assistant - Gemini Edition")
