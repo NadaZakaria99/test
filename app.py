@@ -732,13 +732,14 @@ def uploaded_files():
 
     st.subheader("Uploaded Files")
     
-    for file in file_data:
+    for i, file in enumerate(file_data):  # Use enumerate to get a unique index for each file
         col1, col2, col3 = st.columns([3, 1, 1])
         
         col1.text(f"📄 {file['File Name']}")
         col2.text(f"{file['Size (KB)']} KB")
         
-        if col3.button("Delete", key=file['File Name']):
+        # Use a unique key for the button by appending the index
+        if col3.button("Delete", key=f"delete_{i}_{file['File Name']}"):
             delete_file(file['File Name'])
 def summarizer():
     """Document summarization"""
