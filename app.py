@@ -389,10 +389,31 @@ def take_notes():
     
     except Exception as e:
         st.error(f"An error occurred: {e}")
+
+def init_chat_history():
+    """Initialize chat history in session state."""
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+def display_chat_history():
+    """Display the chat history."""
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+def update_chat_history(role, content):
+    """Update the chat history with a new message."""
+    st.session_state.chat_history.append({"role": role, "content": content})
+    
 def document_query():
-    """Document Q&A"""
+    """Document Q&A with chat history."""
     st.subheader("Document Query")
     
+    # Initialize chat history
+    init_chat_history()
+    
+    # Display chat history
+    display_chat_history()
+    
+    # Fetch the list of documents from the database
     c = conn.cursor()
     c.execute("SELECT name, path FROM files")
     documents = c.fetchall()
@@ -401,32 +422,56 @@ def document_query():
         st.warning("No documents found!")
         return
     
+    # Select a document
     selected_doc = st.selectbox("Select document", [doc[0] for doc in documents])
-    question = st.text_input("Enter your question")
     
-    if question and st.button("Get Answer"):
+    # User input
+    user_input = st.chat_input("Enter your question")
+    
+    if user_input:
+        # Add user message to chat history
+        update_chat_history("user", user_input)
+        
+        # Get the path of the selected document
         doc_path = [doc[1] for doc in documents if doc[0] == selected_doc][0]
+        
+        # Extract text from the document
         text, index, chunks = process_document(doc_path)
         
         # Find relevant chunks
-        query_embedding = embedding_model.encode([question])
+        query_embedding = embedding_model.encode([user_input])
         _, indices = index.search(np.array(query_embedding).astype('float32'), k=3)
         
         context = " ".join([chunks[i] for i in indices[0]])
         
+        # Generate prompt with chat history
+        chat_history = "\n".join(
+            [f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history]
+        )
         prompt = f"""
-        Answer this question based on the provided context.
-        Question: {question}
+        Answer this question based on the provided context and chat history.
+        Chat History:
+        {chat_history}
+        
+        Question: {user_input}
         Context: {context}
         If the answer isn't in the context, say you don't know.
         Provide a concise answer in 2-3 sentences.
         """
         
+        # Get AI response
         answer = generate_with_gemini(prompt)
+        
         if answer:
-            st.write("### Answer")
-            st.write(answer)
-
+            # Add AI response to chat history
+            update_chat_history("assistant", answer)
+            
+            # Display AI response
+            with st.chat_message("assistant"):
+                st.write(answer)
+if st.button("Clear Chat History"):
+    st.session_state.chat_history = []
+    st.rerun()  # Refresh the app to reflect the cleared chat history
 def main():
     st.title("Study Assistant - Gemini Edition")
     
@@ -440,10 +485,10 @@ def main():
     elif choice == "Quiz Generator":
         quiz_generator()
     elif choice == "Document Query":
-        document_query()
+        document_query()  # Includes chat history
     elif choice == "Notes":
         take_notes()
     elif choice == "Uploaded Files":
-        uploaded_files()  # Add this line
+        uploaded_files()
 if __name__ == "__main__":
     main()
