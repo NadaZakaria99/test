@@ -124,7 +124,7 @@ def data_ingestion():
                   (uploaded_file.name, file_path, os.path.getsize(file_path)))
         conn.commit()
         st.success("File uploaded and processed successfully!")
-    
+
     # Manual notes
     st.subheader("Create Manual Notes")
     note_text = st.text_area("Enter your notes here:")
@@ -134,7 +134,80 @@ def data_ingestion():
             pdf_path = save_note_as_pdf(note_text, f"{note_filename}.pdf")
             if pdf_path:
                 st.success(f"Note saved as {pdf_path}")
+def generate_filename(note_text):
+    """Generate a filename using Gemini"""
+    prompt = f"Given the content of the note between <file> and </file> describe it in at max 4 words without any special characters. DO NOT give anything extra <file> '{note_text}' </file>"
+    
+    try:
+        response = generate_with_gemini(prompt)
+        if response:
+            # Clean up the filename (remove extra quotes or spaces)
+            filename = re.sub(r'["\s]+', '', response)  # Removes quotes and spaces
+            return filename
+        else:
+            return "note.pdf"  # Default filename if Gemini fails
+    except Exception as e:
+        st.error(f"Error generating filename: {e}")
+        return "note.pdf"  # Default filename on error
+def get_uploaded_files():
+    """Fetch and return the list of files from the SQLite database."""
+    try:
+        c = conn.cursor()
+        c.execute("SELECT name, size FROM files")
+        files = c.fetchall()
+        
+        if not files:
+            return []
+        
+        return [
+            {
+                "File Name": file[0],
+                "Size (KB)": round(file[1] / 1024, 2),  # Convert bytes to KB
+            }
+            for file in files
+        ]
+    except Exception as e:
+        st.error(f"Error fetching document list: {e}")
+        return []
+def delete_file(file_name):
+    """Delete a file from the SQLite database and local storage."""
+    try:
+        # Get the file path from the database
+        c = conn.cursor()
+        c.execute("SELECT path FROM files WHERE name = ?", (file_name,))
+        file_path = c.fetchone()
+        
+        if file_path:
+            # Delete the file from local storage
+            os.remove(file_path[0])
+            
+            # Delete the file record from the database
+            c.execute("DELETE FROM files WHERE name = ?", (file_name,))
+            conn.commit()
+            
+            st.success(f"File '{file_name}' has been deleted successfully!")
+        else:
+            st.error(f"File '{file_name}' not found.")
+    except Exception as e:
+        st.error(f"Error deleting file '{file_name}': {e}")
+def uploaded_files():
+    """Display the uploaded files with an option to delete them."""
+    file_data = get_uploaded_files()
 
+    if not file_data:
+        st.info("No files have been uploaded yet.")
+        return
+
+    st.subheader("Uploaded Files")
+    
+    for file in file_data:
+        col1, col2, col3 = st.columns([3, 1, 1])
+        
+        col1.text(f"📄 {file['File Name']}")
+        col2.text(f"{file['Size (KB)']} KB")
+        
+        if col3.button("Delete", key=file['File Name']):
+            delete_file(file['File Name'])
 def summarizer():
     """Document summarization"""
     st.subheader("Document Summarization")
@@ -357,7 +430,7 @@ def document_query():
 def main():
     st.title("Study Assistant - Gemini Edition")
     
-    menu = ["Data Ingestion", "Summarizer", "Quiz Generator", "Document Query", "Notes"]
+    menu = ["Data Ingestion", "Summarizer", "Quiz Generator", "Document Query", "Notes", "Uploaded Files"]
     choice = st.sidebar.selectbox("Menu", menu)
     
     if choice == "Data Ingestion":
@@ -369,6 +442,8 @@ def main():
     elif choice == "Document Query":
         document_query()
     elif choice == "Notes":
-        take_notes()  # Add this line
+        take_notes()
+    elif choice == "Uploaded Files":
+        uploaded_files()  # Add this line
 if __name__ == "__main__":
     main()
