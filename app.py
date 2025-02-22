@@ -1003,7 +1003,9 @@ def document_query():
         
         # Generate prompt with chat history (if enabled)
         if st.session_state.use_chat_history:
-            chat_history = get_chat_history()
+            chat_history = "\n".join(
+                [f"{message['role']}: {message['content']}" for message in st.session_state.chat_history]
+            )
             prompt = f"""
             You are a helpful assistant. Answer the user's question based on the provided context and chat history.
             Chat History:
@@ -1043,7 +1045,6 @@ def document_query():
                     response_container.markdown(f"**Answer:** {full_response}▌")
                     time.sleep(0.1)  # Simulate streaming
                 response_container.markdown(f"**Answer:** {full_response}")
-
 def main():
     st.title("Study Assistant - Gemini Edition")
     
