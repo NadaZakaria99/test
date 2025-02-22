@@ -1196,11 +1196,17 @@ def document_query():
                     time.sleep(0.1)  # Simulate streaming
                 response_container.markdown(f"**Answer:** {full_response}")
 def main():
+    # Set the title of the app
     st.title("EduMate – Your Smartest Study Companion!🚀📚")
-    
+
+    # Define the menu options
     menu = ["Data Ingestion", "Summarizer", "Quiz Generator", "Document Query", "Notes", "Uploaded Files"]
-    choice = st.sidebar.selectbox("Menu", menu)
-    
+
+    # Display the menu in the sidebar (always visible)
+    st.sidebar.title("Menu")
+    choice = st.sidebar.radio("Navigate", menu)
+
+    # Handle menu selection
     if choice == "Data Ingestion":
         data_ingestion()
     elif choice == "Summarizer":
