@@ -1177,17 +1177,15 @@ def document_query():
                         # Perform a web search using Tavily
                         web_search_results = web_search_tool.invoke({"query": user_input})
                         
-                        # Format the web search results
-                        formatted_web_search_results = "\n".join(
-                            [f"- {result['title']}: {result['url']}" for result in web_search_results]
-                        )
+                        # Store web search results in session state
+                        st.session_state.web_search_results = web_search_results
                         
                         # Generate a response based on the web search results
                         web_search_prompt = f"""
                         The user asked: {user_input}
                         
                         Here are some web search results:
-                        {formatted_web_search_results}
+                        {web_search_results}
                         
                         Please provide a concise and accurate answer based on the above information.
                         """
