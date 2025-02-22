@@ -404,14 +404,14 @@ def update_chat_history(role, content):
     st.session_state.chat_history.append({"role": role, "content": content})
     
 def document_query():
-    """Document Q&A with chat history."""
+    """Document Q&A with chat history and document selection."""
     st.subheader("Document Query")
     
-    # Initialize chat history
-    init_chat_history()
-    
-    # Display chat history
-    display_chat_history()
+    # Initialize chat history and selected document in session state
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    if "selected_doc" not in st.session_state:
+        st.session_state.selected_doc = None
     
     # Fetch the list of documents from the database
     c = conn.cursor()
@@ -422,18 +422,26 @@ def document_query():
         st.warning("No documents found!")
         return
     
-    # Select a document
-    selected_doc = st.selectbox("Select document", [doc[0] for doc in documents])
+    # Document selection (only once per session)
+    if st.session_state.selected_doc is None:
+        st.session_state.selected_doc = st.selectbox("Select document", [doc[0] for doc in documents])
+        st.info(f"Selected document: {st.session_state.selected_doc}")
+    
+    # Display chat history in an expandable section
+    with st.expander("Chat History"):
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
     
     # User input
     user_input = st.chat_input("Enter your question")
     
     if user_input:
         # Add user message to chat history
-        update_chat_history("user", user_input)
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
         
         # Get the path of the selected document
-        doc_path = [doc[1] for doc in documents if doc[0] == selected_doc][0]
+        doc_path = [doc[1] for doc in documents if doc[0] == st.session_state.selected_doc][0]
         
         # Extract text from the document
         text, index, chunks = process_document(doc_path)
@@ -464,11 +472,12 @@ def document_query():
         
         if answer:
             # Add AI response to chat history
-            update_chat_history("assistant", answer)
+            st.session_state.chat_history.append({"role": "assistant", "content": answer})
             
             # Display AI response
             with st.chat_message("assistant"):
                 st.write(answer)
+                
 if st.button("Clear Chat History"):
     st.session_state.chat_history = []
     st.rerun()  # Refresh the app to reflect the cleared chat history
