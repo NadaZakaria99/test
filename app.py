@@ -946,7 +946,7 @@ def get_chat_history():
 from langchain_community.tools.tavily_search import TavilySearchResults
 
 # Set the Tavily API key
-os.environ["TAVILY_API_KEY"] = "your_tavily_api_key"  # Replace with your actual Tavily API key
+os.environ["TAVILY_API_KEY"] = "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"  # Replace with your actual Tavily API key
 web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 
 def document_query():
