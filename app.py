@@ -1073,11 +1073,7 @@ web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 #                     time.sleep(0.1)  # Simulate streaming
 #                 response_container.markdown(f"**Answer:** {full_response}")
 
-from langchain_community.tools.tavily_search import TavilySearchResults
 
-# Set the Tavily API key
-os.environ["TAVILY_API_KEY"] = "your_tavily_api_key"  # Replace with your actual Tavily API key
-web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 
 def document_query():
     """Document Q&A with chat history, document selection, and web search fallback."""
@@ -1168,28 +1164,26 @@ def document_query():
         # Get AI response using Gemini
         answer = generate_with_gemini(prompt)
         
-        if answer:
-            # Check if the assistant couldn't find the answer in the context
-            if "I don't know" in answer or "not in the context" in answer:
-                # Perform a web search using Tavily
-                web_search_results = web_search_tool.invoke({"query": user_input})
-                
-                # Generate a new prompt with the web search results
-                web_search_prompt = f"""
-                The original query was: {user_input}
-
-                Here are some web search results that might be relevant:
-                {web_search_results}
-
-                Please provide a structured answer based on the above information.
-                """
-                
-                # Generate the final answer using Gemini
-                web_search_answer = generate_with_gemini(web_search_prompt)
-                
-                # Update the answer with web search results
-                answer = f"{answer}\n\n**Web Search Results:**\n{web_search_answer}"
+        # Check if the answer indicates that the context is insufficient
+        if "I don't know" in answer or "not in the context" in answer:
+            # Perform a web search using Tavily
+            web_search_results = web_search_tool.invoke({"query": user_input})
             
+            # Generate a new prompt with the web search results
+            web_search_prompt = f"""
+            The user asked: {user_input}
+            
+            Here are some web search results that might be relevant:
+            {web_search_results}
+            
+            Please provide a structured answer based on the above information.
+            """
+            
+            # Generate the final answer using Gemini
+            answer = generate_with_gemini(web_search_prompt)
+            answer = f"{answer}\n\n*Note: This answer is based on web search results.*"
+        
+        if answer:
             # Add AI response to chat history
             st.session_state.chat_history.append({"role": "assistant", "content": answer})
             
