@@ -429,9 +429,14 @@ def document_query():
         st.warning("No documents found!")
         return
     
-    # Document selection
-    if st.session_state.selected_doc is None:
-        st.session_state.selected_doc = st.selectbox("Select a document to chat with", [doc[0] for doc in documents])
+    # Display the list of uploaded files for selection
+    st.write("### Uploaded Files")
+    file_names = [doc[0] for doc in documents]
+    selected_file = st.selectbox("Select a file to chat with", file_names, key="selected_file")
+    
+    # Update the selected document in session state
+    if selected_file:
+        st.session_state.selected_doc = selected_file
         st.info(f"Selected document: {st.session_state.selected_doc}")
     
     # Sidebar options
