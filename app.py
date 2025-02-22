@@ -1173,10 +1173,11 @@ def document_query():
             web_search_prompt = f"""
             The user asked: {user_input}
             
-            Here are some web search results that might be relevant:
+            Here are some web search results:
             {web_search_results}
             
-            Please provide a structured answer based on the above information.
+            Summarize the most relevant information into a short, comprehensive answer.
+            Provide only the key points in 2-3 sentences.
             """
             
             # Generate the final answer using Gemini
@@ -1196,7 +1197,6 @@ def document_query():
                     response_container.markdown(f"**Answer:** {full_response}▌")
                     time.sleep(0.1)  # Simulate streaming
                 response_container.markdown(f"**Answer:** {full_response}")
-
 def main():
     st.title("Study Assistant - Gemini Edition")
     
