@@ -1196,7 +1196,7 @@ def document_query():
                     time.sleep(0.1)  # Simulate streaming
                 response_container.markdown(f"**Answer:** {full_response}")
 def main():
-    st.title("Study Assistant - Gemini Edition")
+    st.title("EduMate – Your Smartest Study Companion!🚀📚")
     
     menu = ["Data Ingestion", "Summarizer", "Quiz Generator", "Document Query", "Notes", "Uploaded Files"]
     choice = st.sidebar.selectbox("Menu", menu)
