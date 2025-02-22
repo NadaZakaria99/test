@@ -1073,8 +1073,6 @@ web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 #                     time.sleep(0.1)  # Simulate streaming
 #                 response_container.markdown(f"**Answer:** {full_response}")
 
-
-
 def document_query():
     """Document Q&A with chat history, document selection, and web search fallback."""
     st.subheader("Document Query")
@@ -1182,7 +1180,7 @@ def document_query():
             
             # Generate the final answer using Gemini
             answer = generate_with_gemini(web_search_prompt)
-            answer = f"{answer}\n\n*Note: This answer is based on web search results.*"
+            answer = f"{answer}\n\n**Note:** This answer is based on web search results."  # Bold note
         
         if answer:
             # Add AI response to chat history
