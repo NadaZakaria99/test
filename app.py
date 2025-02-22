@@ -398,20 +398,18 @@ def init_chat_session():
         st.session_state.selected_doc = None
     if "use_chat_history" not in st.session_state:
         st.session_state.use_chat_history = True
+
 def clear_chat_history():
     """Clear the chat history."""
     st.session_state.chat_history = []
     st.rerun()
 
-# def display_chat_history():
-#     """Display the chat history."""
-#     for message in st.session_state.chat_history:
-#         with st.chat_message(message["role"]):
-#             st.write(message["content"])
-
-# def update_chat_history(role, content):
-#     """Update the chat history with a new message."""
-#     st.session_state.chat_history.append({"role": role, "content": content})
+def get_chat_history():
+    """Retrieve recent messages from the chat history."""
+    chat_history = []
+    for message in st.session_state.chat_history:
+        chat_history.append(f"{message['role']}: {message['content']}")
+    return "\n".join(chat_history)
 
 def document_query():
     """Document Q&A with chat history and document selection."""
@@ -429,14 +427,9 @@ def document_query():
         st.warning("No documents found!")
         return
     
-    # Display the list of uploaded files for selection
-    st.write("### Uploaded Files")
-    file_names = [doc[0] for doc in documents]
-    selected_file = st.selectbox("Select a file to chat with", file_names, key="selected_file")
-    
-    # Update the selected document in session state
-    if selected_file:
-        st.session_state.selected_doc = selected_file
+    # Document selection
+    if st.session_state.selected_doc is None:
+        st.session_state.selected_doc = st.selectbox("Select a file to chat with", [doc[0] for doc in documents])
         st.info(f"Selected document: {st.session_state.selected_doc}")
     
     # Sidebar options
@@ -474,9 +467,7 @@ def document_query():
         
         # Generate prompt with chat history (if enabled)
         if st.session_state.use_chat_history:
-            chat_history = "\n".join(
-                [f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history]
-            )
+            chat_history = get_chat_history()
             prompt = f"""
             Answer this question based on the provided context and chat history.
             Chat History:
@@ -503,9 +494,15 @@ def document_query():
             # Add AI response to chat history
             st.session_state.chat_history.append({"role": "assistant", "content": answer})
             
-            # Display AI response
+            # Display AI response in a streaming fashion
             with st.chat_message("assistant"):
-                st.write(answer)
+                response_container = st.empty()
+                full_response = ""
+                for chunk in answer.split():
+                    full_response += chunk + " "
+                    response_container.markdown(full_response + "▌")
+                    time.sleep(0.1)  # Simulate streaming
+                response_container.markdown(full_response)
     # Clear chat history button
     # if st.button("Clear Chat History"):
     #     st.session_state.chat_history = []
