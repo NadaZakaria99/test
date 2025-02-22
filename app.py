@@ -906,7 +906,7 @@ def take_notes():
             
             if notes:
                 st.subheader("Generated Notes")
-                st.text_area("Notes Preview", notes, height=300)
+                st.markdown("Notes Preview", notes, height=300)
                 
                 # Allow users to download the notes as a text file
                 download_filename = f"{os.path.splitext(selected_doc)[0]}_notes.txt"
