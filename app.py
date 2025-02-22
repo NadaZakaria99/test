@@ -906,7 +906,9 @@ def take_notes():
             
             if notes:
                 st.subheader("Generated Notes")
-                st.markdown("Notes Preview", notes, height=300)
+                
+                # Display the notes with proper Markdown formatting
+                st.markdown(notes)  # Use st.markdown to render Markdown syntax
                 
                 # Allow users to download the notes as a text file
                 download_filename = f"{os.path.splitext(selected_doc)[0]}_notes.txt"
