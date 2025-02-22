@@ -261,7 +261,61 @@ def quiz_generator():
                     st.info(f"The correct answer is: {question['answer']}")
 
             st.write(f"### Final Score: {total_correct} out of {len(quiz)}")
-
+def take_notes():
+    """Generate notes from a selected document"""
+    st.subheader("Generate Notes from Documents")
+    
+    try:
+        # Fetch the list of documents from the database
+        c = conn.cursor()
+        c.execute("SELECT name, path FROM files")
+        documents = c.fetchall()
+        
+        if not documents:
+            st.warning("No documents found in the database.")
+            return
+        
+        # Display a dropdown to select a document
+        doc_list = [doc[0] for doc in documents]
+        selected_doc = st.selectbox("Choose a document to summarize", doc_list)
+        
+        # Button to generate notes
+        if st.button("Generate Notes"):
+            st.info(f"Generating notes for: {selected_doc}")
+            
+            # Get the path of the selected document
+            doc_path = [doc[1] for doc in documents if doc[0] == selected_doc][0]
+            
+            # Extract text from the document
+            text, _, _ = process_document(doc_path)
+            
+            # Generate notes using Gemini
+            prompt = (
+                f"Make short notes from the following document content. "
+                f"Ensure the notes are concise and presented as bullet points. "
+                f"Focus on key concepts, definitions, and important details.\n\n"
+                f"Document Content:\n{text[:5000]}"  # Limit input size for Gemini
+            )
+            
+            notes = generate_with_gemini(prompt)
+            
+            if notes:
+                st.subheader("Generated Notes")
+                st.text_area("Notes Preview", notes, height=300)
+                
+                # Allow users to download the notes as a text file
+                download_filename = f"{os.path.splitext(selected_doc)[0]}_notes.txt"
+                st.download_button(
+                    label="Download Notes",
+                    data=notes,
+                    file_name=download_filename,
+                    mime="text/plain",
+                )
+            else:
+                st.warning("No notes generated. Please check the document or try again.")
+    
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
 def document_query():
     """Document Q&A"""
     st.subheader("Document Query")
@@ -303,7 +357,7 @@ def document_query():
 def main():
     st.title("Study Assistant - Gemini Edition")
     
-    menu = ["Data Ingestion", "Summarizer", "Quiz Generator", "Document Query"]
+    menu = ["Data Ingestion", "Summarizer", "Quiz Generator", "Document Query", "Notes"]
     choice = st.sidebar.selectbox("Menu", menu)
     
     if choice == "Data Ingestion":
@@ -314,6 +368,5 @@ def main():
         quiz_generator()
     elif choice == "Document Query":
         document_query()
-
-if __name__ == "__main__":
-    main()
+    elif choice == "Notes":
+        take_notes()  # Add this line
