@@ -1661,7 +1661,7 @@ def document_query():
     st.subheader("Chat")
     
     # Add a "Clear Chat" button at the top of the chat history
-    if st.button("Clear Chat"):
+    if st.button("New Chat"):
         clear_chat_history()
         st.rerun()  # Refresh the page to reflect the cleared chat
     
