@@ -1125,6 +1125,7 @@
 
 # if __name__ == "__main__":
 #     main()
+
 import streamlit as st
 import os
 import sqlite3
@@ -1617,6 +1618,18 @@ def document_query():
         
         if answer:
             # Add AI response to chat history
+            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+            
+            # Display AI response in a streaming fashion
+            with st.chat_message("assistant"):
+                response_container = st.empty()
+                full_response = ""
+                for chunk in answer.split():
+                    full_response += chunk + " "
+                    response_container.markdown(f"**Answer:** {full_response}▌")
+                    time.sleep(0.1)  # Simulate streaming
+                response_container.markdown(f"**Answer:** {full_response}")
+
 def main():
     # Set the title of the app
     st.title("EduMate – Your Smartest Study Companion!🚀📚")
