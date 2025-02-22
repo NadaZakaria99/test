@@ -1074,7 +1074,11 @@ web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 #                 response_container.markdown(f"**Answer:** {full_response}")
 
 
+from langchain_community.tools.tavily_search import TavilySearchResults
 
+# Set the Tavily API key
+os.environ["TAVILY_API_KEY"] = "your_tavily_api_key"  # Replace with your actual Tavily API key
+web_search_tool = TavilySearchResults(k=3)  # Retrieve top 3 results
 
 def document_query():
     """Document Q&A with chat history, document selection, and web search fallback."""
@@ -1177,15 +1181,17 @@ def document_query():
                         # Perform a web search using Tavily
                         web_search_results = web_search_tool.invoke({"query": user_input})
                         
-                        # Store web search results in session state
-                        st.session_state.web_search_results = web_search_results
+                        # Format the web search results
+                        formatted_web_search_results = "\n".join(
+                            [f"- {result['title']}: {result['url']}" for result in web_search_results]
+                        )
                         
                         # Generate a response based on the web search results
                         web_search_prompt = f"""
                         The user asked: {user_input}
                         
                         Here are some web search results:
-                        {web_search_results}
+                        {formatted_web_search_results}
                         
                         Please provide a concise and accurate answer based on the above information.
                         """
